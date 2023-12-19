@@ -1,0 +1,785 @@
+---
+title: | 
+  | Proteomics analysis of SARS-CoV2 omicron and delta variant infected Hamster Tissues
+subtitle: |
+  | \vspace{100pt}Submitted to:
+  | Prof. Siddappa Byrareddy
+  | Dept of Pharmacology and Experimental Neuroscience
+  | University of Nebraska Medical Center
+  | USA
+  | \vspace{100pt}
+author: |
+  | Submitted by:
+  | Anoop Ambikan
+  | Core facility for Systems Infection Biology (CSIB)
+  | Division of Clinical Microbiology
+  | Karoliska Institutet, Stockholm
+output: 
+  pdf_document:
+    latex_engine: xelatex
+    toc: no
+    number_sections: true
+    includes:  
+      in_header: /home/anoop/Desktop/CSIB/new_header.tex
+urlcolor: blue
+editor_options:
+  chunk_output_type: console
+linkcolor: 'black'
+bibliography: /home/anoop/Desktop/CSIB/Mybibliography.bib
+csl: /home/anoop/Desktop/CSIB/biomed-central.csl
+sansfont: Arial
+header-includes:
+  - \definecolor{green}{HTML}{163624}
+  - \usepackage[fontsize=12pt]{scrextend}
+  - \usepackage{fancyhdr}
+  - \usepackage{graphicx}
+  - \pagestyle{fancy}
+  - \addtolength{\headheight}{77pt}
+  - \thispagestyle{fancy}
+  - \setlength\textheight{20.5cm}
+  - \renewcommand{\headrule}{\color{green}\hrulefill}
+  - \renewcommand{\footrulewidth}{0.5pt}
+  - \fancyhead[L]{\includegraphics[width = 150pt,height = 360pt]{/home/anoop/Desktop/CSIB/ki_logo_rgb.png}}
+  - \fancyhead[R]{\includegraphics[width = 80pt,height = 60pt]{/home/anoop/Desktop/CSIB/Logo.png}}
+  - \fancyfoot[L]{Core facility for Systems Infection Biology}
+  - \fancyfoot[R]{CSIB-labmed@ki.se \\ 08-524 836 80}
+  - \fancypagestyle{plain}{\pagestyle{fancy}}
+---
+
+\newpage
+```{=latex}
+\setcounter{tocdepth}{4}
+\tableofcontents
+```
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+# \textcolor{green}{Project Description}
+Proteomics data was generated from Omicron, Delta variant of SARS-CoV2 virus infected brain and lung samples extracted from hamster. The machine generated peptide intensity data were processed using Proteome Discoverer software. For brain, six samples of omicron, six samples of delta variant infected tissues and four naive samples are used. Total 5,128 proteins were detected in brain samples. For lung, there are four delta, for naive and six omicron samples and total of 6,919 proteins were detected. 
+
+```{r,warning=FALSE,message=FALSE,eval=FALSE}
+library(NormalyzerDE)
+normalyzer(jobName="Brain",designPath = "/home/anoop/Desktop/Siddappa/Proteomics/Brain/Design.txt",groupColName = "Condition",sampleColName = "ID",
+           dataPath = "/home/anoop/Desktop/Siddappa/Proteomics/Brain/PD_Norm.txt",
+           outputDir = "/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/"
+)
+```
+
+```{r,warning=FALSE,message=FALSE,eval=FALSE}
+library(NormalyzerDE)
+normalyzer(jobName="Lung",designPath = "/home/anoop/Desktop/Siddappa/Proteomics/Lung/Design.txt",groupColName = "Group",sampleColName = "ID",
+           dataPath = "/home/anoop/Desktop/Siddappa/Proteomics/Lung/PD_Norm.txt",
+           outputDir = "/home/anoop/Desktop/Siddappa/Proteomics/Lung/Normalized/"
+)
+```
+
+# \textcolor{green}{Sample distribution}
+The data was first subjected to normalization procedures using the R package **NormalyzerDE v1.12.0** [@NormalyzerDE]. Data normalized using quantile method was chosen for further downstream analysis. Sample distribution was assessed by dimensionality reduction using Principal Component Analysis (PCA). PCA was performed using R package **PCAtools v2.6.0** [@pcatools] with quantile normalized proteomics data as input.
+
+## \textcolor{green}{Brain}
+
+```{r,eval=FALSE}
+library(PCAtools)
+count=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Brain/Quantile-normalized.txt",row.names = 1,check.names = FALSE)
+meta=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Design.txt",row.names = 1)
+p <- PCAtools::pca((count), metadata = meta, removeVar = 0.1)
+write.table(p$rotated,file = "/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Q_PCA.txt",sep = "\t",col.names = NA,quote = FALSE)
+head(p$variance)
+
+```
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based brain sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Q_PCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 66.06% variation",y="PC2, 11.04% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(0,0,0,0, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+```
+
+## \textcolor{green}{Lung}
+
+```{r,eval=FALSE}
+library(PCAtools)
+count=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Lung/Normalized/Lung/Quantile-normalized.txt",row.names = 1,check.names = FALSE)
+meta=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Lung/Design.txt",row.names = 1)
+p <- PCAtools::pca((count), metadata = meta, removeVar = 0.1)
+write.table(p$rotated,file = "/home/anoop/Desktop/Siddappa/Proteomics/Lung/Normalized/Q_PCA.txt",sep = "\t",col.names = NA,quote = FALSE)
+head(p$variance)
+
+```
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based lung sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Lung/Normalized/Q_PCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 43.11% variation",y="PC2, 19.89% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(0,0,0,0, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+```
+
+# \textcolor{green}{Differential expression analysis}
+
+Differentially regulated proteins were identified by perfuming differential expression analysis using R package **Limma v3.50.0** [@limma]. Quantile normalized data was used as input. Proteins with **p.adj < 0.1** were regarded as significantly regulated. 
+
+```{r}
+library(kableExtra)
+dt=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Results.txt", check.names = FALSE)
+kbl(dt, caption = "Differential analysis results (padj < 0.1)", booktabs = T) %>%
+kable_styling(latex_options = c("striped", "hold_position"))
+```
+
+## \textcolor{green}{Brain}
+
+```{r, eval=FALSE}
+library("limma")
+sampleinfo <- read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Design.txt",row.names = 1)
+design <- model.matrix(~0+Group,data = sampleinfo)
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Brain/Quantile-normalized.txt",sep="\t",
+                row.names=1,check.names = FALSE)
+mat <- as.matrix(data)
+fit <- lmFit(mat,design)
+
+
+cont.matrix <- makeContrasts(Naive_vs_Delta=GroupDelta - GroupNaive,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Naive_vs_Delta",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Naive_vs_Delta.txt",sep="\t",quote=FALSE,col.names = NA)
+
+cont.matrix <- makeContrasts(Naive_vs_Omicron=GroupOmicron - GroupNaive,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Naive_vs_Omicron",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Naive_vs_Omicron.txt",sep="\t",quote=FALSE,col.names = NA)
+
+cont.matrix <- makeContrasts(Delta_vs_Omicron=GroupOmicron - GroupDelta,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Delta_vs_Omicron",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Delta_vs_Omicron.txt",sep="\t",quote=FALSE,col.names = NA)
+```
+
+### \textcolor{green}{Delta vs Omicron}
+
+```{r,warning=FALSE,message=FALSE,fig.align = "center",fig.height=2.5, fig.width=5.5, echo=FALSE,fig.cap ="Volcano plot of Delta vs Omicron."}
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Delta_vs_Omicron2.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,max.overlaps = 500)+
+  scale_x_continuous(limits = c(-3, 3), breaks = seq(-3, 3, by = 1))+
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=10),legend.text=element_text(size=10),legend.key.size=unit(0.8,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "right",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")+
+  guides(size=guide_legend(override.aes=list(colour="grey"),nrow = 1),color = guide_legend(nrow = 2),fill = guide_legend(nrow = 2))
+
+```
+
+### \textcolor{green}{Naive vs Delta}
+
+```{r,warning=FALSE,message=FALSE,fig.align = "center",fig.height=2.5, fig.width=5.5, echo=FALSE,fig.cap ="Volcano plot of Naive vs Delta"}
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Naive_vs_Delta.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  scale_x_continuous(limits = c(-2, 2), breaks = seq(-2, 2, by = 1))+
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=10),legend.text=element_text(size=10),legend.key.size=unit(0.8,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "right",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")+
+  guides(size=guide_legend(override.aes=list(colour="grey"),nrow = 1),color = guide_legend(nrow = 2),fill = guide_legend(nrow = 2))
+
+```
+
+### \textcolor{green}{Naive vs Omicron}
+
+```{r,warning=FALSE,message=FALSE,fig.align = "center",fig.height=2.5, fig.width=5.5, echo=FALSE,fig.cap ="Volcano plot of Naive vs Omicron."}
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Naive_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,max.overlaps = 500)+
+  scale_x_continuous(limits = c(-3, 3), breaks = seq(-3, 3, by = 1))+
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=10),legend.text=element_text(size=10),legend.key.size=unit(0.8,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "right",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")+
+  guides(size=guide_legend(override.aes=list(colour="grey"),nrow = 1),color = guide_legend(nrow = 2),fill = guide_legend(nrow = 2))
+
+```
+
+## \textcolor{green}{Lung}
+
+```{r, eval=FALSE}
+library("limma")
+sampleinfo <- read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Lung/Design.txt",row.names = 1)
+design <- model.matrix(~0+Group,data = sampleinfo)
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Lung/Normalized/Lung/Quantile-normalized.txt",sep="\t",
+                row.names=1,check.names = FALSE)
+mat <- as.matrix(data)
+fit <- lmFit(mat,design)
+
+
+cont.matrix <- makeContrasts(Naive_vs_Delta=GroupDelta - GroupNaive,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Naive_vs_Delta",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Proteomics/Lung/Normalized/Naive_vs_Delta.txt",sep="\t",quote=FALSE,col.names = NA)
+
+cont.matrix <- makeContrasts(Naive_vs_Omicron=GroupOmicron - GroupNaive,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Naive_vs_Omicron",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Proteomics/Lung/Normalized/Naive_vs_Omicron.txt",sep="\t",quote=FALSE,col.names = NA)
+
+cont.matrix <- makeContrasts(Delta_vs_Omicron=GroupOmicron - GroupDelta,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Delta_vs_Omicron",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Proteomics/Lung/Normalized/Delta_vs_Omicron.txt",sep="\t",quote=FALSE,col.names = NA)
+```
+
+### \textcolor{green}{Delta vs Omicron}
+
+```{r,warning=FALSE,message=FALSE,fig.align = "center",fig.height=2.5, fig.width=5.5, echo=FALSE,fig.cap ="Volcano plot of Delta vs Omicron."}
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Lung/Normalized/Delta_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  scale_x_continuous(limits = c(-3, 3), breaks = seq(-3, 3, by = 1))+
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=10),legend.text=element_text(size=10),legend.key.size=unit(0.8,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "right",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")+
+  guides(size=guide_legend(override.aes=list(colour="grey"),nrow = 1),color = guide_legend(nrow = 2),fill = guide_legend(nrow = 2))
+
+```
+
+### \textcolor{green}{Naive vs Delta}
+
+```{r,warning=FALSE,message=FALSE,fig.align = "center",fig.height=2.5, fig.width=5.5, echo=FALSE,fig.cap ="Volcano plot of Naive vs Delta"}
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Lung/Normalized/Naive_vs_Delta.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  scale_x_continuous(limits = c(-2, 2), breaks = seq(-2, 2, by = 1))+
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=10),legend.text=element_text(size=10),legend.key.size=unit(0.8,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "right",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")+
+  guides(size=guide_legend(override.aes=list(colour="grey"),nrow = 1),color = guide_legend(nrow = 2),fill = guide_legend(nrow = 2))
+
+```
+
+### \textcolor{green}{Naive vs Omicron}
+
+```{r,warning=FALSE,message=FALSE,fig.align = "center",fig.height=2.5, fig.width=5.5, echo=FALSE,fig.cap ="Volcano plot of Naive vs Omicron."}
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Lung/Normalized/Naive_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  scale_x_continuous(limits = c(-3, 3), breaks = seq(-3, 3, by = 1))+
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=10),legend.text=element_text(size=10),legend.key.size=unit(0.8,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "right",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")+
+  guides(size=guide_legend(override.aes=list(colour="grey"),nrow = 1),color = guide_legend(nrow = 2),fill = guide_legend(nrow = 2))
+
+```
+
+\newpage
+# \textcolor{green}{Pathway enrichment analysis}
+
+Gene-set enrichment using enrichr module from the tool gseapy v0.10.5 was executed to find significantly enriched pathways [@GSEA] [@Enrichr]. Proteins significantly expressed in each comparisons were used as input. KEGG gene-sets corresponding to mouse were used as background. We did not find any significantly enriched pathways. The results can be found in the corresponding supplementary files.
+
+[Note: We did not find gene names corresponding to most of the proteins an per UNIPROT database. This can also affect the pathway analysis. Here I used only known gene names. ]
+
+# \textcolor{green}{Brain (Syrian hamster)}
+Proteomics data was generated from Omicron, Delta variant of SARS-CoV2 virus infected brain samples extracted from hamster. Syrian protemics database was used for peptide search. The machine generated peptide intensity data were processed using Proteome Discoverer software. For brain, six samples of omicron, six samples of delta variant infected tissues and four naive samples are used. Total 5,374 proteins were detected in brain samples.
+
+```{r,warning=FALSE,message=FALSE,eval=FALSE}
+library(NormalyzerDE)
+normalyzer(jobName="Brain",designPath = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Design.txt",groupColName = "Condition",sampleColName = "ID",
+           dataPath = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/MasterData.txt",
+           outputDir = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/"
+)
+```
+
+# \textcolor{green}{Sample distribution (Syrian hamster) }
+The data was first subjected to normalization procedures using the R package **NormalyzerDE v1.12.0** [@NormalyzerDE]. Data normalized using quantile method was chosen for further downstream analysis. Sample distribution was assessed by dimensionality reduction using Principal Component Analysis (PCA). PCA was performed using R package **PCAtools v2.6.0** [@pcatools] with quantile normalized proteomics data as input.
+
+## \textcolor{green}{Brain (Syrian hamster)}
+
+```{r,eval=FALSE}
+library(PCAtools)
+count=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Quantile-normalized.txt",row.names = 1,check.names = FALSE)
+meta=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Design.txt",row.names = 1)
+p <- PCAtools::pca((count), metadata = meta, removeVar = 0.1)
+write.table(p$rotated,file = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Q_PCA.txt",sep = "\t",col.names = NA,quote = FALSE)
+head(p$variance)
+
+```
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based brain sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Q_PCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+pdf("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Q_PCA.pdf")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 67.16% variation",y="PC2, 10.7% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(0,0,0,0, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+dev.off()
+```
+
+# \textcolor{green}{Differential expression analysis}
+
+Differentially regulated proteins were identified by perfuming differential expression analysis using R package **Limma v3.50.0** [@limma]. Quantile normalized data was used as input. Proteins with **p.adj < 0.1** were regarded as significantly regulated. 
+
+```{r}
+library(kableExtra)
+dt=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Results.txt", check.names = FALSE)
+kbl(dt, caption = "Differential analysis results (padj < 0.1)", booktabs = T) %>%
+kable_styling(latex_options = c("striped", "hold_position"))
+```
+
+
+## \textcolor{green}{Brain}
+
+```{r, eval=FALSE}
+library("limma")
+sampleinfo <- read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Design.txt",row.names = 1)
+design <- model.matrix(~0+Group,data = sampleinfo)
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Quantile-normalized.txt",sep="\t",
+                row.names=1,check.names = FALSE)
+mat <- as.matrix(data)
+fit <- lmFit(mat,design)
+
+
+cont.matrix <- makeContrasts(Naive_vs_Delta=GroupDelta - GroupNaive,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Naive_vs_Delta",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Naive_vs_Delta.txt",sep="\t",quote=FALSE,col.names = NA)
+
+cont.matrix <- makeContrasts(Naive_vs_Omicron=GroupOmicron - GroupNaive,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Naive_vs_Omicron",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Naive_vs_Omicron.txt",sep="\t",quote=FALSE,col.names = NA)
+
+cont.matrix <- makeContrasts(Delta_vs_Omicron=GroupOmicron - GroupDelta,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Delta_vs_Omicron",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Delta_vs_Omicron.txt",sep="\t",quote=FALSE,col.names = NA)
+```
+
+### \textcolor{green}{Delta vs Omicron}
+
+```{r,warning=FALSE,message=FALSE,fig.align = "center",fig.height=2.5, fig.width=5.5, echo=FALSE,fig.cap ="Volcano plot of Delta vs Omicron."}
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Delta_vs_Omicron2.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,max.overlaps = 500)+
+  scale_x_continuous(limits = c(-3, 3), breaks = seq(-3, 3, by = 1))+
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=10),legend.text=element_text(size=10),legend.key.size=unit(0.8,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "right",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")+
+  guides(size=guide_legend(override.aes=list(colour="grey"),nrow = 1),color = guide_legend(nrow = 2),fill = guide_legend(nrow = 2))
+
+```
+
+### \textcolor{green}{Naive vs Delta}
+
+```{r,warning=FALSE,message=FALSE,fig.align = "center",fig.height=2.5, fig.width=5.5, echo=FALSE,fig.cap ="Volcano plot of Naive vs Delta"}
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Naive_vs_Delta.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  scale_x_continuous(limits = c(-2, 2), breaks = seq(-2, 2, by = 1))+
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=10),legend.text=element_text(size=10),legend.key.size=unit(0.8,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "right",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")+
+  guides(size=guide_legend(override.aes=list(colour="grey"),nrow = 1),color = guide_legend(nrow = 2),fill = guide_legend(nrow = 2))
+
+```
+
+### \textcolor{green}{Naive vs Omicron}
+
+```{r,warning=FALSE,message=FALSE,fig.align = "center",fig.height=2.5, fig.width=5.5, echo=FALSE,fig.cap ="Volcano plot of Naive vs Omicron."}
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/Brain/Normalized/Naive_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,max.overlaps = 500)+
+  scale_x_continuous(limits = c(-3, 3), breaks = seq(-3, 3, by = 1))+
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=10),legend.text=element_text(size=10),legend.key.size=unit(0.8,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "right",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")+
+  guides(size=guide_legend(override.aes=list(colour="grey"),nrow = 1),color = guide_legend(nrow = 2),fill = guide_legend(nrow = 2))
+
+```
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based brain sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Q_PCA.txt",row.names = 1,check.names = FALSE)
+
+pdf("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Q_PCA.pdf")
+ggplot(dat, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=PC1,y=PC2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 67.16% variation",y="PC2, 10.7% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(4,2.5,4,2.5, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+dev.off()
+```
+
+
+```{r,warning=FALSE,message=FALSE,eval=FALSE}
+library(NormalyzerDE)
+normalyzer(jobName="Brain",designPath = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Design.txt",groupColName = "Group",sampleColName = "ID",+
+           dataPath = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/RawData.txt",
+           outputDir = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized_raw"
+)
+```
+
+
+```{r,eval=FALSE}
+library(PCAtools)
+count=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized_raw/Brain/Quantile-normalized.txt",row.names = 1,check.names = FALSE)
+meta=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Design.txt",row.names = 1)
+p <- PCAtools::pca((count), metadata = meta, removeVar = 0.1)
+write.table(p$rotated,file = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized_raw/Q_PCA.txt",sep = "\t",col.names = NA,quote = FALSE)
+head(p$variance)
+
+```
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based brain sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized_raw/Q_PCA.txt",row.names = 1,check.names = FALSE)
+
+pdf("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized_raw/Q_PCA.pdf")
+ggplot(dat, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=PC1,y=PC2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 67.17% variation",y="PC2, 10.71% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(4,2.5,4,2.5, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+dev.off()
+```
+
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based brain sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Q_PCA.txt",row.names = 1,check.names = FALSE)
+
+pdf("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Q_PCA.pdf")
+ggplot(dat, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=PC1,y=PC2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 67.16% variation",y="PC2, 10.7% variation")+
+  geom_label_repel(aes(label = rownames(dat)),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,max.overlaps = 500)+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(4,2.5,4,2.5, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+dev.off()
+```
+
+
+```{r,eval=FALSE}
+library(umap)
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/Quantile-normalized.txt",header=TRUE,row.names = 1,check.names = FALSE)
+mads=apply(data,1,mad)
+data=data[rev(order(mads))[1:4030],]
+write.table(data,file="/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/FIltered/TopProts.txt",sep="\t",col.names = NA,quote = FALSE)
+
+```
+
+```{r,eval=FALSE}
+library(PCAtools)
+count=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/FIltered/TopProts.txt",row.names = 1,check.names = FALSE)
+meta=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Design.txt",row.names = 1)
+p <- PCAtools::pca((count), metadata = meta, removeVar = 0.1)
+write.table(p$rotated,file = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/FIltered/TopProtsPCA.txt",sep = "\t",col.names = NA,quote = FALSE)
+head(p$variance)
+
+```
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based brain sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/FIltered/TopProtsPCA.txt",row.names = 1,check.names = FALSE)
+
+pdf("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/FIltered/TopProtsPCA.pdf")
+ggplot(dat, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=PC1,y=PC2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 70.28% variation",y="PC2, 9.92% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(4,2.5,4,2.5, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+dev.off()
+```
+
+
+```{r,eval=FALSE}
+library(PCAtools)
+count=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Quantile-normalized.txt",row.names = 1,check.names = FALSE)
+meta=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Des.txt",row.names = 1)
+p <- PCAtools::pca((count), metadata = meta, removeVar = 0.1)
+write.table(p$rotated,file = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/PCA.txt",sep = "\t",col.names = NA,quote = FALSE)
+head(p$variance)
+
+```
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based brain sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/PCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+pdf("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/PCA.pdf")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=2.5,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 70.53% variation",y="PC2, 8.81% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(5,3.5,5,3.5, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+dev.off()
+```
+
+```{r, eval=FALSE}
+library("limma")
+sampleinfo <- read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Des.txt",row.names = 1)
+design <- model.matrix(~0+Group,data = sampleinfo)
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Quantile-normalized.txt",sep="\t",
+                row.names=1,check.names = FALSE)
+mat <- as.matrix(data)
+fit <- lmFit(mat,design)
+
+
+cont.matrix <- makeContrasts(Naive_vs_Delta=GroupDelta - GroupNaive,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Naive_vs_Delta",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Naive_vs_Delta.txt",sep="\t",quote=FALSE,col.names = NA)
+
+cont.matrix <- makeContrasts(Naive_vs_Omicron=GroupOmicron - GroupNaive,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Naive_vs_Omicron",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Naive_vs_Omicron.txt",sep="\t",quote=FALSE,col.names = NA)
+
+cont.matrix <- makeContrasts(Delta_vs_Omicron=GroupOmicron - GroupDelta,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Delta_vs_Omicron",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Delta_vs_Omicron.txt",sep="\t",quote=FALSE,col.names = NA)
+
+```
+
+
+```{r,warning=FALSE,message=FALSE,eval=FALSE}
+
+library(piano)
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Piano/Delta_vs_Omicron.txt",header = TRUE,row.names = 1)
+p <- data[4]
+head(p)
+lfc<-data[1]
+head(lfc)
+set.seed(123)
+
+geneSets <- loadGSC(file = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Piano/pwy/MOUSE.gmt")
+gsares <- runGSA(geneLevelStats=p,directions=lfc,adjMethod = "BH",
+                 gsc = geneSets,
+                 nPerm = 1000)
+res=GSAsummaryTable(gsares)
+write.table(res,file="/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Piano/Delta_vs_OmicronKEGG",sep="\t",col.names = NA,quote = FALSE)
+```
+
+```{r,warning=FALSE,message=FALSE,eval=FALSE}
+
+library(piano)
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Piano/Naive_vs_Delta.txt",header = TRUE,row.names = 1)
+p <- data[4]
+head(p)
+lfc<-data[1]
+head(lfc)
+set.seed(123)
+
+geneSets <- loadGSC(file = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Piano/pwy/MOUSE.gmt")
+gsares <- runGSA(geneLevelStats=p,directions=lfc,adjMethod = "BH",
+                 gsc = geneSets,
+                 nPerm = 1000)
+res=GSAsummaryTable(gsares)
+write.table(res,file="/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Piano/Naive_vs_DeltaKEGG",sep="\t",col.names = NA,quote = FALSE)
+```
+
+```{r,warning=FALSE,message=FALSE,eval=FALSE}
+
+library(piano)
+data=read.delim("/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Piano/Naive_vs_Omicron.txt",header = TRUE,row.names = 1)
+p <- data[4]
+head(p)
+lfc<-data[1]
+head(lfc)
+set.seed(123)
+
+geneSets <- loadGSC(file = "/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Piano/pwy/MOUSE.gmt")
+gsares <- runGSA(geneLevelStats=p,directions=lfc,adjMethod = "BH",
+                 gsc = geneSets,
+                 nPerm = 1000)
+res=GSAsummaryTable(gsares)
+write.table(res,file="/home/anoop/Desktop/Siddappa/Proteomics/New_Brain/Normalized/NEW_Analysis/Piano/Naive_vs_OmicronKEGG",sep="\t",col.names = NA,quote = FALSE)
+```
+
+
+\newpage
+# References
+
+
