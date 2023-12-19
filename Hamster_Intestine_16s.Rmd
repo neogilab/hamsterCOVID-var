@@ -1,0 +1,282 @@
+---
+title: | 
+  | 16s rRNA analysis of SARS-CoV2 omicron and delta variant infected hamster small intestine samples
+subtitle: |
+  | Prof. Siddappa Byrareddy
+  | Dept of Pharmacology and Experimental Neuroscience
+  | University of Nebraska Medical Center
+  | USA
+  | \vspace{100pt}
+  | \vspace{100pt}Submitted to:
+author: |
+  | Anoop Ambikan
+  | Core facility for Systems Infection Biology (CSIB)
+  | Division of Clinical Microbiology
+  | Karoliska Institutet, Stockholm
+  | Submitted by:
+output: 
+  pdf_document:
+    latex_engine: xelatex
+    toc: no
+    number_sections: true
+    includes:  
+      in_header: /home/anoop/Desktop/CSIB/new_header.tex
+urlcolor: blue
+editor_options:
+  chunk_output_type: console
+linkcolor: 'black'
+bibliography: /home/anoop/Desktop/CSIB/Mybibliography.bib
+csl: /home/anoop/Desktop/CSIB/biomed-central.csl
+sansfont: Arial
+header-includes:
+  - \definecolor{green}{HTML}{163624}
+  - \usepackage[fontsize=12pt]{scrextend}
+  - \usepackage{fancyhdr}
+  - \usepackage{graphicx}
+  - \pagestyle{fancy}
+  - \addtolength{\headheight}{77pt}
+  - \thispagestyle{fancy}
+  - \setlength\textheight{20.5cm}
+  - \renewcommand{\headrule}{\color{green}\hrulefill}
+  - \renewcommand{\footrulewidth}{0.5pt}
+  - \fancyhead[L]{\includegraphics[width = 150pt,height = 360pt]{/home/anoop/Desktop/CSIB/ki_logo_rgb.png}}
+  - \fancyhead[R]{\includegraphics[width = 80pt,height = 60pt]{/home/anoop/Desktop/CSIB/Logo.png}}
+  - \fancyfoot[L]{Core facility for Systems Infection Biology}
+  - \fancyfoot[R]{CSIB-labmed@ki.se \\ 08-524 836 80}
+  - \fancypagestyle{plain}{\pagestyle{fancy}}
+---
+
+\newpage
+```{=latex}
+\setcounter{tocdepth}{4}
+\tableofcontents
+```
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# \textcolor{green}{Project Description}
+
+16s rRNA sequence analysis was performed to investigate the alteration of gut microbiome in response to SARS-CoV2 infection in hamsters.  Intestine samples were collected from omicron and delta variant of SARS-CoV2 virus infected hamsters and 16s rRNA data was generated. Four samples from non-infected hamster was also included in the study as control. Further, downstream analysis was performed and enrichment of various micro-organisms is examined.
+
+# \textcolor{green}{Analysis}
+
+All the initial processing of the data were performed using R package DADA2 v1.22.0 [@DADA2]. The tool employs improved version of Divisive Amplicon Denoising Algorithm (DADA) algorithm to compute amplicon sequence variants (ASV) from amplicon sequences data of taxonomic marker genes such as 16S rRNA gene in bacteria. An ASV is an inferred single DNA sequences derived from high-throughput analysis of marker genes. ASVs were introduced in 2013 as an efficient alternative to operational taxonomic unit (OTU). OTUs show a coarser notion of similarity over ASVs. The most commonly selected sequence similarity threshold for OTU is 3% so that sequences belong to an OTU share 97% similarity. Whereas ASVs are able to resolve sequence differences by single nucleotide change, thereby avoiding similarity-based operational clustering units altogether. Therefore, ASVs have a finer divergence between sequences. More information about advantage of ASVs over OTUs can be found here [@DAD2vsOTU]. The analysis involves the following steps,
+
++ Pre-processing
++ ASV table construction
++ Ordination plots
++ Species diversity estimation
++ Microbiota difference at family and genus
+
+## \textcolor{green}{Pre-processing}
+
+The fastq files were first subjected to quality check where quality of the bases was examined and low quality bases were trimmed. Furthermore, the DADA2 algorithm makes use of a parametric error model (err) and every amplicon dataset has a different set of error rates. The learnErrors method learns this error model from the data, by alternating estimation of the error rates and inference of sample composition until they converge on a jointly consistent solution. 
+
+```{r,message=FALSE,warning=FALSE}
+library(dada2)
+path <- "/home/anoop/Desktop/Siddappa/Intestine_16s/FastQ_N0"
+fnFs <- sort(list.files(path, pattern="_R1.fastq", full.names = TRUE))
+fnRs <- sort(list.files(path, pattern="_R2.fastq", full.names = TRUE))
+sample.names <- sapply(strsplit(basename(fnFs), "_R"), `[`, 1)
+```
+
+```{r, eval=FALSE}
+errF <- learnErrors(fnFs, multithread=TRUE)
+errR <- learnErrors(fnRs, multithread=TRUE)
+```
+
+```{r,eval=FALSE}
+saveRDS(errF, file = "/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/FwdErrorModel.rds")
+saveRDS(errR, file = "/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/RevErrorModel.rds")
+
+```
+
+```{r, message=FALSE,warning=FALSE, fig.align = "center",fig.height=7, fig.width=7, echo=FALSE,fig.cap ="Visualization of error rates in forward reads for each possible transition (A→C, A→G, …) "}
+ErrorF=readRDS("/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/FwdErrorModel.rds")
+pdf("/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/erroFw.pdf")
+plotErrors(ErrorF, nominalQ=TRUE)
+dev.off()
+```
+
+```{r, message=FALSE,warning=FALSE, fig.align = "center",fig.height=6.5, fig.width=7, echo=FALSE,fig.cap ="Visualization of error rates in reverse reads for each possible transition (A→C, A→G, …) "}
+ErrorR=readRDS("/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/RevErrorModel.rds")
+pdf("/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/erro.pdf")
+plotErrors(ErrorR, nominalQ=TRUE)
+dev.off()
+```
+
+Points in the plots are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score. Here the estimated error rates (black line) are a good fit to the observed rates (points), and the error rates drop with increased quality as expected.
+
+## \textcolor{green}{ASV table construction}
+
+ASV tables is then constructed using makeSequenceTable() function from DADA2 package. The paired reads were first merged based on at-least 12 bases of overlap and the merged sequences were used for ASV table construction. After ASV table creation, presence of chimeric sequence checked using the removeBimeraDenovo() function. The function found 14490 chimeric sequences and those were removed. Then taxonomy was assigned using silva nr99 v138.1 (updated, Mar 10, 2021) database as reference [@silva]. Species level taxonomy assignment was also performed using silva database for species as reference. Totally, we identified 1846 ASVs. Further downstream processing of ASV table was performed using R package phyloseq v1.38.0 [@phyloseq]. Firstly, the ASV counts were converted to relative abundance and ASVs with mean relative abundance less than 1e-5 were filtered out.
+
+```{r,eval=FALSE}
+ErrorF=readRDS("/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/FwdErrorModel.rds")
+ErrorR=readRDS("/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/RevErrorModel.rds")
+dadaFs <- dada(fnFs, err=ErrorF, multithread=TRUE)
+dadaRs <- dada(fnRs, err=ErrorR, multithread=TRUE)
+```
+
+
+```{r,eval=FALSE}
+mergers <- mergePairs(dadaFs, fnFs, dadaRs, fnRs, verbose=TRUE)
+```
+
+```{r,eval=FALSE}
+saveRDS(mergers, file = "/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/mergers.rds")
+```
+
+```{r, eval=FALSE}
+seqtab <- makeSequenceTable(mergers)
+```
+
+```{r,eval=FALSE}
+seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
+```
+
+```{r,eval=FALSE,message=FALSE,warning=FALSE}
+taxa <- assignTaxonomy(seqtab.nochim, "/home/anoop/Desktop/Siddappa/16s/silva_nr99_v138.1_train_set.fa.gz", multithread=TRUE)
+```
+
+```{r,eval=FALSE,message=FALSE,warning=FALSE}
+taxa <- addSpecies(taxa, "/home/anoop/Desktop/Siddappa/16s/silva_species_assignment_v138.1.fa.gz")
+```
+
+```{r,message=FALSE,warning=FALSE}
+library(phyloseq)
+library(Biostrings)
+library(ggplot2)
+```
+
+```{r,eval=FALSE,message=FALSE,warning=FALSE}
+samples.out <- rownames(seqtab.nochim)
+```
+
+```{r,eval=FALSE,message=FALSE,warning=FALSE}
+des=read.delim("/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Design.txt",row.names = 1)
+ps <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows=FALSE), sample_data(des), tax_table(taxa))
+```
+
+```{r,eval=FALSE}
+write.table(t(ps@otu_table),file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Master_ASV_Table.txt",sep="\t",col.names = NA,quote = FALSE)
+write.table((ps@tax_table),file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Master_Taxa_Table.txt",sep="\t",col.names = NA,quote = FALSE)
+```
+
+```{r,eval=FALSE,message=FALSE,warning=FALSE}
+GPr  = transform_sample_counts(ps, function(x) x / sum(x) ) # Relative count
+GPfr = filter_taxa(GPr, function(x) mean(x) > 1e-5, TRUE)  # low abundant ASV filtering
+```
+
+```{r,eval=FALSE}
+write.table(t(GPfr@otu_table),file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Master_RelAbd_Table.txt",sep="\t",col.names = NA,quote = FALSE)
+write.table((GPfr@tax_table),file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Master_RelAbd_Taxa_Table.txt",sep="\t",col.names = NA,quote = FALSE)
+```
+
+
+```{r,eval=FALSE,message=FALSE,warning=FALSE}
+NMDS_jsd  <- ordinate(GPfr, method="NMDS", distance="jsd")
+NMDS_jsd_P <- plot_ordination(GPfr, NMDS_jsd)
+write.table(NMDS_jsd_P$data,file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/NMDS_jsd.txt",sep="\t",col.names = NA,quote = FALSE)
+
+NMDS_Jaccard <- ordinate(GPfr, method="NMDS", distance="jaccard")
+NMDS_Jaccard_P <- plot_ordination(GPfr, NMDS_Jaccard)
+write.table(NMDS_Jaccard_P$data,file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/NMDS_Jaccard.txt",sep="\t",col.names = NA,quote = FALSE)
+
+NMDS_bray <- ordinate(GPfr, method="NMDS", distance="bray")
+NMDS_bray_P <- plot_ordination(GPfr, NMDS_bray)
+write.table(NMDS_bray_P$data,file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/NMDS_bray.txt",sep="\t",col.names = NA,quote = FALSE)
+
+NMDS_gower <- ordinate(GPfr, method="NMDS", distance="gower")
+NMDS_gower_P <- plot_ordination(GPfr, NMDS_gower)
+write.table(NMDS_gower_P$data,file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/NMDS_gower.txt",sep="\t",col.names = NA,quote = FALSE)
+
+```
+
+```{r,eval=FALSE,message=FALSE,warning=FALSE}
+PCoA_jsd  <- ordinate(GPfr, method="PCoA", distance="jsd")
+PCoA_jsd_P <- plot_ordination(GPfr, PCoA_jsd)
+write.table(PCoA_jsd_P$data,file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/PCoA_jsd.txt",sep="\t",col.names = NA,quote = FALSE)
+
+PCoA_Jaccard <- ordinate(GPfr, method="PCoA", distance="jaccard")
+PCoA_Jaccard_P <- plot_ordination(GPfr, PCoA_Jaccard)
+write.table(PCoA_Jaccard_P$data,file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/PCoA_Jaccard.txt",sep="\t",col.names = NA,quote = FALSE)
+
+PCoA_bray <- ordinate(GPfr, method="PCoA", distance="bray")
+PCoA_bray_P <- plot_ordination(GPfr, PCoA_bray)
+write.table(PCoA_bray_P$data,file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/PCoA_bray.txt",sep="\t",col.names = NA,quote = FALSE)
+
+PCoA_gower <- ordinate(GPfr, method="PCoA", distance="gower")
+PCoA_gower_P <- plot_ordination(GPfr, PCoA_gower)
+write.table(PCoA_gower_P$data,file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/PCoA_gower.txt",sep="\t",col.names = NA,quote = FALSE)
+
+```
+
+```{r,eval=FALSE,message=FALSE,warning=FALSE}
+GP <- prune_taxa(taxa_sums(ps) > 0, ps)
+alpha=plot_richness(GP)
+head(alpha$data)
+write.table(alpha$data,file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Alphadiversity.txt",sep="\t",col.names = NA,quote = FALSE)
+write.table(t(GPfr@otu_table),file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Filtered_ASV_Table.txt",sep="\t",col.names = NA,quote = FALSE)
+write.table((GPfr@tax_table),file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Filtered_taxa_Table.txt",sep="\t",col.names = NA,quote = FALSE)
+```
+
+```{r,eval=FALSE}
+library(reshape)
+Distance=phyloseq::distance(GPfr, method="bray")
+df  <- melt(as.matrix(Distance))
+colnames(df)[2] <- "variable"
+Cas=reshape::cast(df)
+write.table((Cas),file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/brayDistance.txt",sep="\t",row.names =FALSE,quote = FALSE)
+```
+
+
+
+```{r,eval=FALSE}
+write.table(t(GPr@otu_table),file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/LefSe/Master_RelAbd_Table.txt",sep="\t",col.names = NA,quote = FALSE)
+write.table((GPr@tax_table),file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/LefSe/Master_RelAbd_Taxa_Table.txt",sep="\t",col.names = NA,quote = FALSE)
+```
+
+
+```{r}
+library(vegan)
+library(stats)
+data=read.delim("/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Permanova/Test/Family_Abd.txt",row.names = 1)
+meta=read.delim("/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Permanova/Test/Design.txt",row.names = 1)
+permanova <- adonis((data) ~ Group,
+               data = meta, permutations=99, method = "bray")
+print(as.data.frame(permanova$aov.tab)["Group", "Pr(>F)"])
+
+dist <- vegdist((data))
+anova(betadisper(dist, meta$Group))
+
+coef <- coefficients(permanova)["Group1",]
+top.coef <- coef[rev(order(abs(coef)))[1:20]]
+
+write.table(as.data.frame(top.coef),file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Permanova/Test/Top20Family.txt",sep="\t",col.names = NA,quote = FALSE)
+```
+
+
+```{r}
+library(vegan)
+library(stats)
+data=read.delim("/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Permanova/Test/Genus_Abd.txt",row.names = 1)
+meta=read.delim("/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Permanova/Test/Design.txt",row.names = 1)
+permanova <- adonis((data) ~ Group,
+               data = meta, permutations=99, method = "bray")
+print(as.data.frame(permanova$aov.tab)["Group", "Pr(>F)"])
+
+dist <- vegdist((data))
+anova(betadisper(dist, meta$Group))
+
+coef <- coefficients(permanova)["Group1",]
+top.coef <- coef[rev(order(abs(coef)))[1:20]]
+
+write.table(as.data.frame(top.coef),file="/home/anoop/Desktop/Siddappa/Intestine_16s/Analysis/Permanova/Test/Top20Genus.txt",sep="\t",col.names = NA,quote = FALSE)
+```
+
+
+
