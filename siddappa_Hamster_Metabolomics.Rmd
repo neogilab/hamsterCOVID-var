@@ -1,0 +1,739 @@
+---
+title: |
+  | Metabolomics analysis of SARS-CoV2 omicron and delta variant infected Hamster Tissues
+author: | 
+  | Anoop Ambikan
+  | Division of Clinical Microbiology
+output:
+  rmarkdown::pdf_document:
+    fig_caption: true
+    toc_depth: 3
+    number_sections: true
+    includes:  
+      in_header: new_header.tex
+bibliography: /home/anoop/Desktop/Anoop/Tutorial/Mybibliography.bib
+csl: /home/anoop/Desktop/Siddappa/biomed-central.csl
+sansfont: Arial
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# \textcolor{blue}{Project Description}
+
+Metabolomics data was generated from Omicron, Delta variant of SARS-CoV2 virus infected kidney, plasma, brain, heart and lung samples extracted from hamster. The analysis pipeline executes the following tasks,
+
+&nbsp;&nbsp;&nbsp;&nbsp;**1. Sample distribution**
+
+&nbsp;&nbsp;&nbsp;&nbsp;**2. Differential metabolite analysis**
+
+# \textcolor{blue}{Sample distribution}
+
+Principal Component Analysis (PCA) was performed on the Log2 scale transformed data to visualize the sample distribution. R/Bioconductor package **PCAtools v2.6.0 **[@pcatools] was used. 
+
+## Kidney
+
+```{r,eval=FALSE}
+library(PCAtools)
+count=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/KidneyData.txt",row.names = 1,check.names = FALSE)
+dataL=log2(count)
+meta=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/KidneyDesign.txt",row.names = 1)
+p <- PCAtools::pca((dataL), metadata = meta, removeVar = 0.1)
+write.table(p$rotated,file = "/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/KidneyPCA.txt",sep = "\t",col.names = NA,quote = FALSE)
+head(p$variance)
+
+```
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based kidney sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/KidneyPCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+#pdf("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/BrainPCA.pdf")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 43.8% variation",y="PC2, 13.32% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(0,0,0,0, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+#dev.off()
+```
+
+
+```{r,eval=FALSE}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/KidneyPCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+pdf("/home/anoop/Desktop/Siddappa/Figures/KidneyPCA.pdf")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 43.8% variation",y="PC2, 13.32% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(4.5,3,4.5,3, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+dev.off()
+```
+
+## Plasma
+
+```{r,eval=FALSE}
+library(PCAtools)
+count=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/PlamaData.txt",row.names = 1,check.names = FALSE)
+dataL=log2(count)
+meta=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/PlasmaDesign.txt",row.names = 1)
+p <- PCAtools::pca((dataL), metadata = meta, removeVar = 0.1)
+write.table(p$rotated,file = "/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/PlasmaPCA.txt",sep = "\t",col.names = NA,quote = FALSE)
+head(p$variance)
+
+```
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based plasma sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/PlasmaPCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+#pdf("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/HeartPCA.pdf")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 40.32% variation",y="PC2, 18.97% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(0,0,0,0, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+#dev.off()
+```
+
+```{r,eval=FALSE}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/PlasmaPCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+pdf("/home/anoop/Desktop/Siddappa/Figures/PlasmaPCA.pdf")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 40.32% variation",y="PC2, 18.97% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(4.5,3,4.5,3, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+dev.off()
+```
+
+## Brain
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based brain sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/BrainPCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+#pdf("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/BrainPCA.pdf")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 26.67% variation",y="PC2, 23.22% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(0,0,0,0, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+#dev.off()
+```
+
+
+```{r,eval=FALSE}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/BrainPCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+pdf("/home/anoop/Desktop/Siddappa/Figures/BrainPCA.pdf")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 26.67% variation",y="PC2, 23.22% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(4.5,3,4.5,3, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+dev.off()
+```
+
+
+## Heart
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based heart sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/HeartPCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+#pdf("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/HeartPCA.pdf")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 30.01% variation",y="PC2, 19.03% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(0,0,0,0, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+#dev.off()
+```
+
+```{r,eval=FALSE}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/HeartPCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+pdf("/home/anoop/Desktop/Siddappa/Figures/HeartPCA.pdf")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 30.01% variation",y="PC2, 19.03% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(4.5,3,4.5,3, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+dev.off()
+```
+
+# Lung
+
+```{r,fig.align = "center",fig.height=3, fig.width=4.5, echo=FALSE,fig.cap ="PCA based lung sample distribution."}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/PCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 25.48% variation",y="PC2, 22.82% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(0,0,0,0, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+
+```
+
+```{r,eval=FALSE}
+library(ggplot2)
+library(ggrepel)
+dat=read.delim("/home/anoop/Desktop/Siddappa/PCA.txt",row.names = 1,check.names = FALSE)
+gg <- merge(dat,aggregate(cbind(mean.pc1=PC1,mean.pc2=PC2)~Group,dat,mean),by="Group")
+pdf("/home/anoop/Desktop/Siddappa/Figures/LungPCA.pdf")
+ggplot(gg, aes(PC1,PC2,color=Group))+geom_point(size=3,aes(fill=Group),shape=21)+
+  geom_point(aes(x=mean.pc1,y=mean.pc2,fill=Group,color=Group),size=3.5,shape=21)+theme_gray()+
+  geom_segment(aes(x=mean.pc1, y=mean.pc2, xend=PC1, yend=PC2))+
+    scale_color_manual(values=c(Delta="#990000",Omicron="#996300",Naive="#2a4e6c"))+
+    scale_fill_manual(values=c(Delta="#b20000",Omicron="#b27300",Naive="#315b7d"))+
+  labs(x="PC1, 25.48% variation",y="PC2, 22.82% variation")+
+  theme(axis.title = element_text(size=10),legend.position = "right",plot.margin = margin(4.5,3,4.5,3, "cm"),
+        legend.title=element_blank(),legend.text=element_text(size=10),legend.key.size = unit(0.5, "cm"))+
+  stat_ellipse(geom = "polygon",aes(fill = Group), alpha = 0.25,linetype = "dotted",level = 0.9)+
+  guides(shape = guide_legend(ncol =1,override.aes=list(fill="grey",color="grey")),color = guide_legend(ncol =1),fill = guide_legend(ncol =1))
+dev.off()
+```
+
+
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+# \textcolor{blue}{Differential metabolite analysis}
+
+Differential analysis was performed to find the significantly regulated metabolites. R package limma v3.50.0 [@limma] was used for the analysis. Metabolites with adjusted pvalue less than 0.1 were considered as significantly regulated. Table 1 shows the number of significantly enriched metabolites in all the analysis. Complete results can be found in the following supplementary files,
+
+1. Kidney_Diff_Analysis_Results.xlsx
+2. Plasma_Diff_Analysis_Results.xlsx
+3. Brain_Diff_Analysis_Results.xlsx
+4. Heart_Diff_Analysis_Results.xlsx
+5. Lung_Diff_Analysis_Results.xlsx
+
+```{r}
+library(kableExtra)
+dt=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Complete_Results.txt", check.names = FALSE)
+kbl(dt, caption = "Differential analysis results", booktabs = T) %>%
+kable_styling(latex_options = c("striped", "hold_position"))
+```
+
+```{r, eval=FALSE}
+library("limma")
+sampleinfo <- read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/KidneyDesign.txt",row.names = 1)
+design <- model.matrix(~0+Group,data = sampleinfo)
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/KidneyData.txt",sep="\t",row.names=1,check.names = FALSE)
+mat <- as.matrix(log2(data))
+fit <- lmFit(mat,design)
+
+
+cont.matrix <- makeContrasts(Naive_vs_Delta=GroupDelta - GroupNaive,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Naive_vs_Delta",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/Kidney_Naive_vs_Delta.txt",sep="\t",quote=FALSE,col.names = NA)
+
+cont.matrix <- makeContrasts(Naive_vs_Omicron=GroupOmicron - GroupNaive,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Naive_vs_Omicron",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/Kidney_Naive_vs_Omicron.txt",sep="\t",quote=FALSE,col.names = NA)
+
+cont.matrix <- makeContrasts(Delta_vs_Omicron=GroupOmicron - GroupDelta,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Delta_vs_Omicron",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/Kidney_Delta_vs_Omicron.txt",sep="\t",quote=FALSE,col.names = NA)
+```
+
+```{r, eval=FALSE}
+library("limma")
+sampleinfo <- read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/PlasmaDesign.txt",row.names = 1)
+design <- model.matrix(~0+Group,data = sampleinfo)
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/PlamaData.txt",sep="\t",row.names=1,check.names = FALSE)
+mat <- as.matrix(log2(data))
+fit <- lmFit(mat,design)
+
+
+cont.matrix <- makeContrasts(Naive_vs_Delta=GroupDelta - GroupNaive,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Naive_vs_Delta",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/Plasma_Naive_vs_Delta.txt",sep="\t",quote=FALSE,col.names = NA)
+
+cont.matrix <- makeContrasts(Naive_vs_Omicron=GroupOmicron - GroupNaive,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Naive_vs_Omicron",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/Plasma_Naive_vs_Omicron.txt",sep="\t",quote=FALSE,col.names = NA)
+
+cont.matrix <- makeContrasts(Delta_vs_Omicron=GroupOmicron - GroupDelta,levels=design)
+fit.cont <- contrasts.fit(fit, cont.matrix)
+fit.cont <- eBayes(fit.cont)
+limma.res <- topTable(fit.cont,coef="Delta_vs_Omicron",sort.by="p",n="Inf")
+write.table(limma.res,file="/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/Plasma_Delta_vs_Omicron.txt",sep="\t",quote=FALSE,col.names = NA)
+```
+
+## \textcolor{blue}{Kidney}
+## \textcolor{blue}{Naive vs Delta [Kidney]}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Naive vs Delta in kidney samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Delta compared to Naive")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/Kidney_Naive_vs_Delta.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(breaks = seq(-15, 15, by = 5), limits = c(-15, 15)) +
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Naive vs Omicron [Kidney]}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Naive vs Omicron in kidney samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Omicron compared to Naive")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/Kidney_Naive_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(breaks=(seq(-19, 15, 5)), limits = c(-19, 15)) +
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Delta vs Omicron [Kidney]}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Delta vs Omicron in kidney samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Omicron compared to Delta")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Kidney/Kidney_Delta_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(breaks=(seq(-5, 5, 2)), limits = c(-5, 5)) +
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Plasma}
+## \textcolor{blue}{Naive vs Delta [Plasma]}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Naive vs Delta in plasma samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Delta compared to Naive")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/Plasma_Naive_vs_Delta.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(breaks=(seq(-5, 5, 2)), limits = c(-5, 5)) +
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Naive vs Omicron [Plasma]}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Naive vs Omicron in plasma samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Omicron compared to Naive")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/Plasma_Naive_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(breaks=(seq(-4, 2, 2)), limits = c(-4, 2)) +
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Delta vs Omicron [Plasma]}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Delta vs Omicron in plasma samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Omicron compared to Delta")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/Plasma/Plasma_Delta_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(breaks=(seq(-4, 4, 2)), limits = c(-4, 4)) +
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Brain}
+## \textcolor{blue}{Naive vs Delta [Brain]}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Naive vs Delta in Brain samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Delta compared to Naive")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/Brain_Naive_vs_Delta.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(breaks=(seq(-8, 14, 5)), limits = c(-8, 14)) +
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Naive vs Omicron [Brain]}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Naive vs Omicron in brain samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Omicron compared to Naive")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/Brain_Naive_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(breaks=(seq(-13, 9, 5)), limits = c(-13, 9)) +
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Delta vs Omicron [Brain]}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Delta vs Omicron in brain samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Omicron compared to Delta")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/Brain_Delta_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(breaks=(seq(-15, 10, 5)), limits = c(-15, 10)) +
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Heart}
+## \textcolor{blue}{Naive vs Delta [Heart]}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Naive vs Delta in heart samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Delta compared to Naive")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/Heart_Naive_vs_Delta.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(breaks=(seq(-10, 10, 5)), limits = c(-10, 10)) +
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Naive vs Omicron [Heart]}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Naive vs Omicron in heart samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Omicron compared to Naive")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/Heart_Naive_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(breaks=(seq(-11, 9, 5)), limits = c(-11, 9)) +
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Delta vs Omicron [Heart]}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Delta vs Omicron in heart samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Omicron compared to Delta")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Hamster_Brain_Metabolomics/Heart_Delta_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(breaks=(seq(-13, 6, 5)), limits = c(-13, 6)) +
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Lung}
+## \textcolor{blue}{Naive vs Delta}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Naive vs Delta in lung samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Delta compared to Naive")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Naive_vs_Delta.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  scale_x_continuous(limits = c(-15, 7), breaks = seq(-15, 7, by = 5))+
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Naive vs Omicron}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Naive vs Omicron in lung samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Omicron compared to Naive")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Naive_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+## \textcolor{blue}{Delta vs Omicron}
+
+```{r,message=FALSE,warning=FALSE,fig.align = "center",fig.height=3.25, fig.width=4.5, echo=FALSE,fig.cap =c("Volcano plot of Delta vs Omicron in lung samples. Negative log2 fold change denotes down regulation and positive values denote up regulation in Omicron compared to Delta")}
+data=read.delim("/home/anoop/Desktop/Siddappa/Delta_vs_Omicron.txt",row.names = 1)
+
+library(ggrepel)
+
+ggplot(data, aes(x=logFC, y=-log10(adj.P.Val))) + 
+  geom_point(data=subset(data, adj.P.Val>=0.1),aes(x=logFC, y=-log10(adj.P.Val),size=-log10(adj.P.Val)),color="#bfbfbf")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC < 0),aes(x=logFC, y=-log10(adj.P.Val),color=abs(logFC),size=-log10(adj.P.Val)))+
+  scale_color_gradient(low = "#e3fc03", high = "#004c00")+
+  geom_point(data=subset(data, adj.P.Val<0.1 & logFC > 0),shape=21,aes(x=logFC,y=-log10(adj.P.Val),fill=abs(logFC),
+                                                                        size=-log10(adj.P.Val)),color="transparent")+
+  scale_fill_gradient(low = "yellow", high = "#b20000")+
+  scale_size(range = c(0.1, 4))+
+  geom_label_repel(aes(label = Label),segment.color = '#cccccc',fill=NA,color="black",size=2.5,
+                   label.size = NA,segment.alpha=0.75,box.padding=0,nudge_x = 0.55,nudge_y = -0.5,max.overlaps = 500)+
+  geom_vline(xintercept=0, linetype="dotted",size=0.35)+
+  geom_hline(yintercept=1, linetype="dotted",size=0.35)+
+  theme(legend.title=element_text(size=8),legend.text=element_text(size=6),legend.key.size=unit(0.7,"line"),
+        plot.title = element_text(hjust = 0.5,size =9),axis.title.y=element_text(size=10),legend.position = "none",
+        axis.title.x=element_text(size=10),axis.text=element_text(size=10,color="black"),plot.margin = margin(0,0,0,0, "cm"))+
+  labs(x="Log2 fold change",y="-log10 (p.adj)")
+```
+
+![Venn diagram of differentialy changed metabolites in Naive-vs-Delta in the 5 tissue samples](/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/VENN/Naive_Delta.png){#id .class width=100% height=100%}
+
+![Venn diagram of differentialy changed metabolites in Naive-vs-Omicron in the 5 tissue samples](/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/VENN/Naive_Omicron.png){#id .class width=100% height=100%}
+
+![Venn diagram of differentialy changed metabolites in Delta-vs-Omicron in the 5 tissue samples](/home/anoop/Desktop/Siddappa/Hamster_Metabolomics/VENN/Delta_Omicron.png){#id .class width=100% height=100%}
+
+
+# \textcolor{blue}{Reference}
